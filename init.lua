@@ -479,6 +479,21 @@ require('lazy').setup({
         --
         defaults = {
           path_display = { 'truncate' },
+          vimgrep_arguments = {
+            'rg',
+            '--color=never',
+            '--no-heading',
+            '--with-filename',
+            '--line-number',
+            '--column',
+            '--smart-case',
+            '--no-ignore',  -- Ignore .gitignore files
+          },
+        },
+        pickers = {
+          find_files = {
+            find_command = { 'fd', '--type', 'f', '--strip-cwd-prefix', '--no-ignore' },
+          },
         },
         extensions = {
           ['ui-select'] = {
@@ -737,10 +752,13 @@ require('lazy').setup({
       --  - capabilities (table): Override fields in capabilities. Can be used to disable certain LSP features.
       --  - settings (table): Override the default settings passed when initializing the server.
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
+      -- Conditionally choose Python LSP based on availability
+      local python_lsp = vim.fn.executable('node') == 1 and 'pyright' or 'pylsp'
+
       local servers = {
         -- clangd = {},
         -- gopls = {},
-        pyright = {},
+        [python_lsp] = {}, -- Use pyright if Node.js is available, otherwise pylsp
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
@@ -789,6 +807,7 @@ require('lazy').setup({
       require('mason-lspconfig').setup {
         ensure_installed = {}, -- explicitly set to an empty table (Kickstart populates installs via mason-tool-installer)
         automatic_installation = false,
+        automatic_enable = false, -- Disable automatic enable to prevent errors with automatic_enable feature
         handlers = {
           function(server_name)
             local server = servers[server_name] or {}
