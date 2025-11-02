@@ -15,6 +15,12 @@ return {
   },
   opts = {
     filesystem = {
+      filtered_items = {
+        visible = true, -- Show filtered items (dimmed)
+        hide_dotfiles = false,
+        hide_gitignored = false,
+      },
+      group_empty_dirs = false, -- Don't collapse single-child directories
       window = {
         mappings = {
           ['\\'] = 'close_window',

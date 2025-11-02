@@ -89,6 +89,9 @@ P.S. You can delete this when you're done too. It's your config now! :)
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
+vim.opt.tabstop = 4
+vim.opt.shiftwidth = 4
+vim.opt.expandtab = true
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
 vim.g.have_nerd_font = false
@@ -102,7 +105,7 @@ vim.g.have_nerd_font = false
 vim.o.number = true
 -- You can also add relative line numbers, to help with jumping.
 --  Experiment for yourself to see if you like it!
--- vim.o.relativenumber = true
+vim.o.relativenumber = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.o.mouse = 'a'
@@ -159,19 +162,87 @@ vim.o.inccommand = 'split'
 vim.o.cursorline = true
 
 -- Minimal number of screen lines to keep above and below the cursor.
-vim.o.scrolloff = 10
+vim.o.scrolloff = 20
 
 -- if performing an operation that would fail due to unsaved changes in the buffer (like `:q`),
 -- instead raise a dialog asking if you wish to save the current file(s)
 -- See `:help 'confirm'`
 vim.o.confirm = true
+-- Yank realpath of current file (or current netrw directory) to OS clipboard
+
+-- If you haven't already, enable the system clipboard integration:
+--   vim.opt.clipboard = "unnamedplus"
+
+-- Functions for yanking abspath to clipboard
+local function fs_realpath(p)
+  local uv = vim.uv or vim.loop
+  local rp = uv and uv.fs_realpath and uv.fs_realpath(p) or nil
+  if not rp or rp == '' then
+    -- Fallback to Vim's resolve for older setups
+    rp = vim.fn.resolve(p)
+  end
+  return rp
+end
+
+local function current_path()
+  -- In netrw, copy the directory being viewed; otherwise the current file.
+  if vim.bo.filetype == 'netrw' then
+    return vim.b.netrw_curdir or vim.g.netrw_curdir or (vim.uv or vim.loop).cwd()
+  end
+  local p = vim.fn.expand '%:p'
+  if p == nil or p == '' then
+    return (vim.uv or vim.loop).cwd()
+  end
+  return p
+end
+
+local function yank_path(path)
+  local rp = fs_realpath(path or '')
+  if not rp or rp == '' then
+    vim.notify('No path to yank', vim.log.levels.WARN)
+    return
+  end
+  -- Yank to both + and * so this works across platforms/terms.
+  pcall(vim.fn.setreg, '+', rp)
+  pcall(vim.fn.setreg, '*', rp)
+  vim.notify('Yanked: ' .. rp)
+end
 
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
-
 -- Clear highlights on search when pressing <Esc> in normal mode
 --  See `:help hlsearch`
+--  -- Toggle left explorer rooted at current file's directory
+-- MY KEYMAPS
+
+vim.keymap.set('n', '<leader>yp', function()
+  yank_path(current_path())
+end, { desc = 'Yank realpath of file/dir to clipboard' })
+vim.keymap.set('n', '<leader>st', '<cmd>Telescope treesitter<cr>', { desc = '<cmd>[S]earch [T]reesitter<CR>' })
+vim.keymap.set('n', '<leader>di', vim.diagnostic.open_float, { desc = 'Show diagnostic float' })
+vim.keymap.set('n', '<leader>dd', '<cmd>Telescope diagnostics<CR>', { desc = 'Telescope: diagnostics' })
+
+-- Navigation Stuff
+vim.g.netrw_winsize = 75
+vim.keymap.set('n', '<leader>v', function()
+  -- If a netrw buffer is visible, close its window
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    if vim.bo[buf].filetype == 'netrw' then
+      vim.api.nvim_win_close(win, false)
+      return
+    end
+  end
+  -- Open at file's directory, left-split
+  vim.cmd 'Lexplore %:p:h'
+  vim.cmd('vertical resize ' .. vim.g.netrw_winsize)
+end, { desc = 'Toggle netrw at current file dir' })
+
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
+vim.keymap.set('i', '@now', function()
+  local ts = '[' .. os.date '%Y-%m-%d %H:%M:%S' .. ']'
+  return ts
+end, { expr = true, noremap = true })
 
 -- Diagnostic keymaps
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
@@ -183,7 +254,6 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 -- NOTE: This won't work in all terminal emulators/tmux/etc. Try your own mapping
 -- or just use <C-\><C-n> to exit terminal mode
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
-
 -- TIP: Disable arrow keys in normal mode
 -- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
 -- vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
@@ -407,12 +477,9 @@ require('lazy').setup({
         -- You can put your default mappings / updates / etc. in here
         --  All the info you're looking for is in `:help telescope.setup()`
         --
-        -- defaults = {
-        --   mappings = {
-        --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
-        --   },
-        -- },
-        -- pickers = {}
+        defaults = {
+          path_display = { 'truncate' },
+        },
         extensions = {
           ['ui-select'] = {
             require('telescope.themes').get_dropdown(),
@@ -673,7 +740,7 @@ require('lazy').setup({
       local servers = {
         -- clangd = {},
         -- gopls = {},
-        -- pyright = {},
+        pyright = {},
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
@@ -894,7 +961,7 @@ require('lazy').setup({
       -- Load the colorscheme here.
       -- Like many other themes, this one has different styles, and you could load
       -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      vim.cmd.colorscheme 'tokyonight-night'
+      -- vim.cmd.colorscheme 'tokyonight-night'
     end,
   },
 
@@ -984,7 +1051,7 @@ require('lazy').setup({
   --    This is the easiest way to modularize your config.
   --
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
-  -- { import = 'custom.plugins' },
+  { import = 'custom.plugins' },
   --
   -- For additional information with loading, sourcing and examples see `:help lazy.nvim-🔌-plugin-spec`
   -- Or use telescope!
@@ -1014,3 +1081,14 @@ require('lazy').setup({
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
+
+vim
+  .api
+  .nvim_create_autocmd('FileType', {
+    pattern = 'python',
+    callback = function()
+      vim.opt_local.colorcolumn = '100'
+    end,
+  })
+  -- vim.g.netrw_altv = 1
+  -- vim.g.netrw_browse_split = 0
