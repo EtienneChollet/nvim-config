@@ -215,12 +215,25 @@ end
 --  -- Toggle left explorer rooted at current file's directory
 -- MY KEYMAPS
 
-vim.keymap.set('n', '<leader>yp', function()
-  yank_path(current_path())
-end, { desc = 'Yank realpath of file/dir to clipboard' })
+-- Treesitter
 vim.keymap.set('n', '<leader>st', '<cmd>Telescope treesitter<cr>', { desc = '<cmd>[S]earch [T]reesitter<CR>' })
+
+-- Telescope diagnostics
 vim.keymap.set('n', '<leader>di', vim.diagnostic.open_float, { desc = 'Show diagnostic float' })
 vim.keymap.set('n', '<leader>dd', '<cmd>Telescope diagnostics<CR>', { desc = 'Telescope: diagnostics' })
+
+-- Getting information on current path/file being edited
+-- Yank real path
+vim.keymap.set('n', '<leader>yp', function()
+  yank_path(current_path())
+end, { desc = '[Y]ank real [P]ath of file/dir to clipboard' })
+
+-- Get cursor position
+vim.keymap.set('n', '<leader>yc', function()
+  local pos = string.format('%s:%d:%d', vim.fn.expand '%:p', vim.fn.line '.', vim.fn.col '.')
+  vim.fn.setreg('+', pos) -- yanks it to clipboard
+  print(pos)
+end, { desc = '[Y]ank [C]ursor location `abspath:line:col`' })
 
 -- Navigation Stuff
 vim.g.netrw_winsize = 75
@@ -520,9 +533,9 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
       vim.keymap.set('n', '<leader>en', function()
         require('telescope.builtin').find_files {
-            cwd = vim.fn.stdpath("config")
+          cwd = vim.fn.stdpath 'config',
         }
- end)
+      end)
 
       -- Slightly advanced example of overriding default behavior and theme
       vim.keymap.set('n', '<leader>/', function()
@@ -1106,13 +1119,11 @@ require('lazy').setup({
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
 
-vim
-  .api
-  .nvim_create_autocmd('FileType', {
-    pattern = 'python',
-    callback = function()
-      vim.opt_local.colorcolumn = '100'
-    end,
-  })
-  -- vim.g.netrw_altv = 1
-  -- vim.g.netrw_browse_split = 0
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'python',
+  callback = function()
+    vim.opt_local.colorcolumn = '100'
+  end,
+})
+-- vim.g.netrw_altv = 1
+-- vim.g.netrw_browse_split = 0
