@@ -93,6 +93,22 @@ vim.opt.tabstop = 4
 vim.opt.shiftwidth = 4
 vim.opt.expandtab = true
 
+-- [[ Use local storage for swap/undo/backup files (NFS is too slow) ]]
+-- Store all nvim temporary files on local disk instead of NFS for better performance
+local nvim_local_dir = '/tmp/nvim-' .. vim.fn.getenv 'USER'
+vim.fn.mkdir(nvim_local_dir .. '/swap', 'p')
+vim.fn.mkdir(nvim_local_dir .. '/backup', 'p')
+vim.fn.mkdir(nvim_local_dir .. '/undo', 'p')
+vim.fn.mkdir(nvim_local_dir .. '/state', 'p')
+
+-- Override vim's data directories to use local storage
+vim.o.directory = nvim_local_dir .. '/swap//'
+vim.o.backupdir = nvim_local_dir .. '/backup//'
+vim.o.undodir = nvim_local_dir .. '/undo//'
+
+-- Override XDG state directory for shada and other state files
+vim.env.XDG_STATE_HOME = nvim_local_dir .. '/state'
+
 -- Set to true if you have a Nerd Font installed and selected in the terminal
 vim.g.have_nerd_font = false
 
@@ -500,7 +516,7 @@ require('lazy').setup({
             '--line-number',
             '--column',
             '--smart-case',
-            '--no-ignore',  -- Ignore .gitignore files
+            '--no-ignore', -- Ignore .gitignore files
           },
         },
         pickers = {
@@ -771,7 +787,7 @@ require('lazy').setup({
       --  - settings (table): Override the default settings passed when initializing the server.
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       -- Conditionally choose Python LSP based on availability
-      local python_lsp = vim.fn.executable('node') == 1 and 'pyright' or 'pylsp'
+      local python_lsp = vim.fn.executable 'node' == 1 and 'pyright' or 'pylsp'
 
       local servers = {
         clangd = {},
@@ -973,7 +989,16 @@ require('lazy').setup({
       fuzzy = { implementation = 'lua' },
 
       -- Shows a signature help window while you type arguments for a function
-      signature = { enabled = true },
+      signature = {
+        enabled = true,
+        window = {
+          min_width = 1,
+          max_width = 100,
+          max_height = 30,
+          border = 'rounded',
+          winblend = 0,
+        },
+      },
     },
   },
 
@@ -1074,7 +1099,7 @@ require('lazy').setup({
   --  Here are some example plugins that I've included in the Kickstart repository.
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
-  -- require 'kickstart.plugins.debug',
+  require 'kickstart.plugins.debug',
   -- require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',
   require 'kickstart.plugins.autopairs',
