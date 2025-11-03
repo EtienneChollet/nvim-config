@@ -8,7 +8,25 @@ return {
     'nvimdev/lspsaga.nvim',
     event = 'LspAttach',
     config = function()
-      require('lspsaga').setup {}
+      require('lspsaga').setup {
+        ui = {
+          border = 'rounded',
+        },
+        hover = {
+          max_width = 0.6,
+          max_height = 0.8,
+          open_link = 'gx',
+        },
+        diagnostic = {
+          on_insert = false,
+          on_insert_follow = false,
+        },
+        lightbulb = {
+          enable = false,
+        },
+      }
+      -- Better hover keybinding
+      vim.keymap.set('n', 'K', '<cmd>Lspsaga hover_doc<CR>', { desc = 'Lspsaga hover documentation' })
     end,
     dependencies = {
       'nvim-treesitter/nvim-treesitter',
