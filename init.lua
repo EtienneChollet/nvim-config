@@ -238,6 +238,12 @@ vim.keymap.set('n', '<leader>st', '<cmd>Telescope treesitter<cr>', { desc = '<cm
 vim.keymap.set('n', '<leader>di', vim.diagnostic.open_float, { desc = 'Show diagnostic float' })
 vim.keymap.set('n', '<leader>dd', '<cmd>Telescope diagnostics<CR>', { desc = 'Telescope: diagnostics' })
 
+-- Run Python script
+vim.keymap.set('n', '<leader>r', function()
+  vim.cmd 'write'
+  vim.cmd('!python %')
+end, { desc = '[R]un current Python script' })
+
 -- Getting information on current path/file being edited
 -- Yank real path
 vim.keymap.set('n', '<leader>yp', function()
