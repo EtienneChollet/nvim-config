@@ -93,6 +93,12 @@ vim.opt.tabstop = 4
 vim.opt.shiftwidth = 4
 vim.opt.expandtab = true
 
+-- Add nvm node to PATH for LSP servers (pyright, etc.)
+local nvm_node_path = vim.fn.expand('~/.nvm/versions/node/v22.21.0/bin')
+if vim.fn.isdirectory(nvm_node_path) == 1 then
+  vim.env.PATH = nvm_node_path .. ':' .. vim.env.PATH
+end
+
 -- [[ Use local storage for swap/undo/backup files (NFS is too slow) ]]
 -- Store all nvim temporary files on local disk instead of NFS for better performance
 local nvim_local_dir = '/tmp/nvim-' .. vim.fn.getenv 'USER'
@@ -129,13 +135,12 @@ vim.o.mouse = 'a'
 -- Don't show the mode, since it's already in the status line
 vim.o.showmode = false
 
--- Sync clipboard between OS and Neovim.
---  Schedule the setting after `UiEnter` because it can increase startup-time.
---  Remove this option if you want your OS clipboard to remain independent.
---  See `:help 'clipboard'`
-vim.schedule(function()
-  vim.o.clipboard = 'unnamedplus'
-end)
+-- Sync clipboard between OS and Neovim via OSC52 (works over SSH)
+-- Disabled 'unnamedplus' to avoid xclip errors on remote systems
+-- OSC52 clipboard provider is configured via nvim-osc52 plugin below
+-- vim.schedule(function()
+--   vim.o.clipboard = 'unnamedplus'
+-- end)
 
 -- Enable break indent
 vim.o.breakindent = true
@@ -233,6 +238,14 @@ end
 
 -- Treesitter
 vim.keymap.set('n', '<leader>st', '<cmd>Telescope treesitter<cr>', { desc = '<cmd>[S]earch [T]reesitter<CR>' })
+vim.keymap.set('n', '<leader>sD', function()
+  require('telescope.builtin').live_grep({
+    additional_args = function()
+      return { '--pcre2', '-i' }
+    end,
+    default_text = [[^\s*(class|def)\s.*]],
+  })
+end, { desc = 'Find defs/classes with "resample"' })
 
 -- Telescope diagnostics
 vim.keymap.set('n', '<leader>di', vim.diagnostic.open_float, { desc = 'Show diagnostic float' })
@@ -329,6 +342,10 @@ vim.keymap.set('i', '@now', function()
   return ts
 end, { expr = true, noremap = true })
 
+-- Tab navigation
+vim.keymap.set('n', '<D-[>', '<cmd>tabprevious<CR>', { desc = 'Go to previous tab' })
+vim.keymap.set('n', '<D-]>', '<cmd>tabnext<CR>', { desc = 'Go to next tab' })
+
 -- Diagnostic keymaps
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
 
@@ -371,14 +388,7 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   group = vim.api.nvim_create_augroup('kickstart-highlight-yank', { clear = true }),
   callback = function()
     vim.hl.on_yank()
-
-    -- Copy to local clipboard via OSC52 (works over SSH and tmux)
-    local copy_to_clipboard = vim.v.event.operator == 'y' and vim.v.event.regname == ''
-    if copy_to_clipboard then
-      local text = table.concat(vim.v.event.regcontents, '\n')
-      local b64 = vim.fn.system('base64', text):gsub('\n', '')
-      io.stdout:write(string.format('\027]52;c;%s\007', b64))
-    end
+    -- OSC52 clipboard sync is now handled by nvim-osc52 plugin
   end,
 })
 
@@ -411,6 +421,37 @@ rtp:prepend(lazypath)
 require('lazy').setup({
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
   'NMAC427/guess-indent.nvim', -- Detect tabstop and shiftwidth automatically
+
+  -- OSC52 clipboard integration for SSH/remote sessions
+  {
+    'ojroques/nvim-osc52',
+    config = function()
+      require('osc52').setup {
+        max_length = 0,      -- Maximum length of selection (0 for no limit)
+        silent = false,      -- Disable message on successful copy
+        trim = false,        -- Trim surrounding whitespaces before copy
+        tmux_passthrough = true, -- Use tmux passthrough (requires tmux >= 3.3)
+      }
+
+      -- Set up clipboard to use OSC52
+      local function copy(lines, _)
+        require('osc52').copy(table.concat(lines, '\n'))
+      end
+
+      local function paste()
+        return {vim.fn.split(vim.fn.getreg(''), '\n'), vim.fn.getregtype('')}
+      end
+
+      vim.g.clipboard = {
+        name = 'osc52',
+        copy = {['+'] = copy, ['*'] = copy},
+        paste = {['+'] = paste, ['*'] = paste},
+      }
+
+      -- Optional: Set clipboard to use OSC52
+      vim.opt.clipboard = 'unnamedplus'
+    end,
+  },
 
   -- NOTE: Plugins can also be added by using a table,
   -- with the first argument being the link and the following
@@ -812,6 +853,8 @@ require('lazy').setup({
         severity_sort = true,
         float = { border = 'rounded', source = 'if_many' },
         underline = { severity = vim.diagnostic.severity.ERROR },
+        -- Only show ERROR level diagnostics (hide warnings, info, hints)
+        -- virtual_text = { severity = vim.diagnostic.severity.ERROR },
         signs = vim.g.have_nerd_font and {
           text = {
             [vim.diagnostic.severity.ERROR] = '󰅚 ',
@@ -850,13 +893,10 @@ require('lazy').setup({
       --  - capabilities (table): Override fields in capabilities. Can be used to disable certain LSP features.
       --  - settings (table): Override the default settings passed when initializing the server.
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
-      -- Conditionally choose Python LSP based on availability
-      local python_lsp = vim.fn.executable 'node' == 1 and 'pyright' or 'pylsp'
-
       local servers = {
         clangd = {},
         -- gopls = {},
-        [python_lsp] = {}, -- Use pyright if Node.js is available, otherwise pylsp
+        pyright = {}, -- Python LSP (requires Node.js)
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
