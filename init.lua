@@ -239,10 +239,60 @@ vim.keymap.set('n', '<leader>di', vim.diagnostic.open_float, { desc = 'Show diag
 vim.keymap.set('n', '<leader>dd', '<cmd>Telescope diagnostics<CR>', { desc = 'Telescope: diagnostics' })
 
 -- Run Python script
-vim.keymap.set('n', '<leader>r', function()
+vim.keymap.set('n', '<leader>rp', function()
   vim.cmd 'write'
   vim.cmd('!python %')
-end, { desc = '[R]un current Python script' })
+end, { desc = '[R]un current [P]ython script' })
+
+-- Run pytest on current file or function
+vim.keymap.set('n', '<leader>rt', function()
+  vim.cmd 'write'
+  local file = vim.fn.expand '%:p'
+
+  -- Try to get the current function name using treesitter
+  local function get_test_function_name()
+    local ts_utils_ok, ts_utils = pcall(require, 'nvim-treesitter.ts_utils')
+    if not ts_utils_ok then
+      return nil
+    end
+
+    local node = ts_utils.get_node_at_cursor()
+    if not node then
+      return nil
+    end
+
+    -- Walk up the tree to find a function definition
+    while node do
+      if node:type() == 'function_definition' then
+        -- Get the function name node
+        local name_node = node:field('name')[1]
+        if name_node then
+          local name = vim.treesitter.get_node_text(name_node, 0)
+          -- Only return if it's a test function
+          if name:match('^test_') then
+            return name
+          end
+        end
+      end
+      node = node:parent()
+    end
+
+    return nil
+  end
+
+  local test_func = get_test_function_name()
+  local cmd
+
+  if test_func then
+    cmd = string.format('python -m pytest %s::%s -v', file, test_func)
+    print(string.format('Running test: %s', test_func))
+  else
+    cmd = string.format('python -m pytest %s -v', file)
+    print('Running all tests in file')
+  end
+
+  vim.cmd('!' .. cmd)
+end, { desc = '[R]un current [T]est function or file' })
 
 -- Getting information on current path/file being edited
 -- Yank real path
