@@ -3,6 +3,9 @@ return {
   dependencies = {
     'nvim-treesitter/nvim-treesitter',
   },
+  rocks = {
+    enabled = false,  -- Disable luarocks dependency (not available on this system)
+  },
   opts = {
     backend = 'kitty', -- Works with iTerm2's inline image protocol
     integrations = {
