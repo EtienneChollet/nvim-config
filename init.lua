@@ -307,6 +307,70 @@ vim.keymap.set('n', '<leader>rt', function()
   vim.cmd('!' .. cmd)
 end, { desc = '[R]un current [T]est function or file' })
 
+-- Run current Python function with regular Python interpreter
+vim.keymap.set('n', '<leader>rf', function()
+  vim.cmd 'write'
+
+  -- Get current function using treesitter
+  local function get_current_function()
+    local ts_utils_ok, ts_utils = pcall(require, 'nvim-treesitter.ts_utils')
+    if not ts_utils_ok then
+      return nil, nil
+    end
+
+    local node = ts_utils.get_node_at_cursor()
+    if not node then
+      return nil, nil
+    end
+
+    -- Walk up the tree to find a function definition
+    while node do
+      if node:type() == 'function_definition' then
+        local name_node = node:field('name')[1]
+        if name_node then
+          local name = vim.treesitter.get_node_text(name_node, 0)
+          local func_text = vim.treesitter.get_node_text(node, 0)
+          return name, func_text
+        end
+      end
+      node = node:parent()
+    end
+
+    return nil, nil
+  end
+
+  local func_name, func_text = get_current_function()
+
+  if not func_name then
+    print('No function found at cursor')
+    return
+  end
+
+  -- Get all imports from the current file
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  local imports = {}
+  for _, line in ipairs(lines) do
+    if line:match '^import ' or line:match '^from ' then
+      table.insert(imports, line)
+    end
+  end
+
+  -- Create temp file with imports + function + call
+  local temp_file = vim.fn.tempname() .. '.py'
+  local content = table.concat(imports, '\n') .. '\n\n' .. func_text .. '\n\nif __name__ == "__main__":\n    ' .. func_name .. '()\n'
+
+  local f = io.open(temp_file, 'w')
+  if f then
+    f:write(content)
+    f:close()
+
+    print(string.format('Running function: %s()', func_name))
+    vim.cmd('!python ' .. temp_file)
+  else
+    print('Failed to create temp file')
+  end
+end, { desc = '[R]un current [F]unction' })
+
 -- Getting information on current path/file being edited
 -- Yank real path
 vim.keymap.set('n', '<leader>yp', function()
@@ -774,11 +838,17 @@ require('lazy').setup({
           -- Jump to the definition of the word under your cursor.
           --  This is where a variable was first declared, or where a function is defined, etc.
           --  To jump back, press <C-t>.
-          map('grd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
+          map('grd', function()
+            vim.cmd('tab split')
+            require('telescope.builtin').lsp_definitions()
+          end, '[G]oto [D]efinition')
 
           -- WARN: This is not Goto Definition, this is Goto Declaration.
           --  For example, in C this would take you to the header.
-          map('grD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
+          map('grD', function()
+            vim.cmd('tab split')
+            vim.lsp.buf.declaration()
+          end, '[G]oto [D]eclaration')
 
           -- Fuzzy find all the symbols in your current document.
           --  Symbols are things like variables, functions, types, etc.
@@ -1251,5 +1321,27 @@ vim.api.nvim_create_autocmd('FileType', {
     vim.opt_local.colorcolumn = '100'
   end,
 })
+
+-- [[ Auto-save and auto-reload configuration ]]
+-- Auto-save on every change (both normal and insert mode)
+vim.api.nvim_create_autocmd({"TextChanged", "TextChangedI"}, {
+  pattern = "*",
+  callback = function()
+    vim.cmd("silent! write")
+    vim.cmd("checktime")  -- Reload if file changed externally
+  end
+})
+
+-- Auto-reload when cursor stops moving or on focus
+vim.api.nvim_create_autocmd({"CursorHold", "FocusGained"}, {
+  pattern = "*",
+  command = "checktime"
+})
+
+-- Built-in auto-save and auto-reload options
+vim.opt.autowrite = true      -- Auto-save when switching buffers
+vim.opt.autowriteall = true   -- Auto-save more aggressively
+vim.opt.autoread = true       -- Auto-reload when file changes externally
+
 -- vim.g.netrw_altv = 1
 -- vim.g.netrw_browse_split = 0
