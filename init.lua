@@ -89,6 +89,8 @@ P.S. You can delete this when you're done too. It's your config now! :)
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
+-- Disable space's default behavior (moving forward one character)
+vim.keymap.set({ 'n', 'v' }, '<Space>', '<Nop>', { silent = true })
 vim.opt.tabstop = 4
 vim.opt.shiftwidth = 4
 vim.opt.expandtab = true
@@ -1194,7 +1196,7 @@ require('lazy').setup({
       -- Load the colorscheme here.
       -- Like many other themes, this one has different styles, and you could load
       -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      -- vim.cmd.colorscheme 'tokyonight-night'
+      vim.cmd.colorscheme 'tokyonight-night'
     end,
   },
 
@@ -1326,17 +1328,19 @@ vim.api.nvim_create_autocmd('FileType', {
 })
 
 -- [[ Auto-save and auto-reload configuration ]]
--- Auto-save on every change (both normal and insert mode)
-vim.api.nvim_create_autocmd({"TextChanged", "TextChangedI"}, {
+-- Auto-save after 1 second of idle time (similar to VSCode's afterDelay)
+-- Uses CursorHold which fires after 'updatetime' milliseconds of inactivity
+vim.api.nvim_create_autocmd({"CursorHold", "CursorHoldI"}, {
   pattern = "*",
   callback = function()
-    vim.cmd("silent! write")
-    vim.cmd("checktime")  -- Reload if file changed externally
+    if vim.bo.modified and vim.bo.buftype == "" and vim.fn.filereadable(vim.fn.expand("%")) == 1 then
+      vim.cmd("silent! write")
+    end
   end
 })
 
--- Auto-reload when cursor stops moving or on focus
-vim.api.nvim_create_autocmd({"CursorHold", "FocusGained"}, {
+-- Auto-reload when cursor stops moving or on focus (cheap read operation)
+vim.api.nvim_create_autocmd({"CursorHold", "FocusGained", "BufEnter"}, {
   pattern = "*",
   command = "checktime"
 })
@@ -1345,6 +1349,7 @@ vim.api.nvim_create_autocmd({"CursorHold", "FocusGained"}, {
 vim.opt.autowrite = true      -- Auto-save when switching buffers
 vim.opt.autowriteall = true   -- Auto-save more aggressively
 vim.opt.autoread = true       -- Auto-reload when file changes externally
+vim.opt.updatetime = 500      -- Wait 500ms (0.5 seconds) after typing stops before triggering CursorHold
 
 -- vim.g.netrw_altv = 1
 -- vim.g.netrw_browse_split = 0

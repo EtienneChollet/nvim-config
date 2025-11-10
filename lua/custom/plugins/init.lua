@@ -47,7 +47,7 @@ return {
         },
       }
       -- Activate catppuccin
-      vim.cmd.colorscheme 'catppuccin'
+      -- vim.cmd.colorscheme 'catppuccin'
     end,
   },
   {
