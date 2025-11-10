@@ -386,6 +386,73 @@ vim.keymap.set('n', '<leader>yc', function()
   print(pos)
 end, { desc = '[Y]ank [C]ursor location `abspath:line:col`' })
 
+-- Add current location to quickfix list
+vim.api.nvim_create_user_command('QfAdd', function()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local filepath = vim.api.nvim_buf_get_name(bufnr)
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local line = cursor[1]
+  local col = cursor[2] + 1  -- nvim uses 0-indexed columns
+
+  -- Get the current quickfix list
+  local qflist = vim.fn.getqflist()
+
+  -- Add new entry
+  table.insert(qflist, {
+    filename = filepath,
+    lnum = line,
+    col = col,
+    text = vim.api.nvim_buf_get_lines(bufnr, line - 1, line, false)[1] or ""
+  })
+
+  -- Update quickfix list
+  vim.fn.setqflist(qflist, 'r')
+
+  print(string.format("Added %s:%d to quickfix", vim.fn.fnamemodify(filepath, ':t'), line))
+end, { desc = "Add current location to quickfix list" })
+
+vim.keymap.set('n', '<C-q>', ':QfAdd<CR>', { desc = 'Add current location to quickfix' })
+vim.keymap.set('n', '<leader>q[', ':cprev<CR>', { desc = '[Q]uickfix [[] previous' })
+vim.keymap.set('n', '<leader>q]', ':cnext<CR>', { desc = '[Q]uickfix []] next' })
+
+-- Open current file/line on GitHub
+vim.keymap.set('n', '<leader>gh', function()
+  local filepath = vim.fn.expand '%:p'
+  local line = vim.fn.line '.'
+
+  -- Get git root directory
+  local git_root = vim.fn.systemlist('git -C ' .. vim.fn.shellescape(vim.fn.expand '%:p:h') .. ' rev-parse --show-toplevel')[1]
+  if vim.v.shell_error ~= 0 then
+    print('Not in a git repository')
+    return
+  end
+
+  -- Get relative path from git root
+  local rel_path = filepath:sub(#git_root + 2)  -- +2 to skip the trailing slash
+
+  -- Get remote URL
+  local remote_url = vim.fn.systemlist('git -C ' .. vim.fn.shellescape(git_root) .. ' remote get-url origin')[1]
+  if vim.v.shell_error ~= 0 then
+    print('No git remote found')
+    return
+  end
+
+  -- Convert SSH URL to HTTPS if needed
+  -- git@github.com:user/repo.git -> https://github.com/user/repo
+  local https_url = remote_url:gsub('git@github%.com:', 'https://github.com/')
+  https_url = https_url:gsub('%.git$', '')
+
+  -- Get current branch
+  local branch = vim.fn.systemlist('git -C ' .. vim.fn.shellescape(git_root) .. ' rev-parse --abbrev-ref HEAD')[1]
+
+  -- Construct GitHub URL
+  local github_url = string.format('%s/blob/%s/%s#L%d', https_url, branch, rel_path, line)
+
+  -- Open in browser (macOS)
+  vim.fn.system('open ' .. vim.fn.shellescape(github_url))
+  print('Opened in browser: ' .. github_url)
+end, { desc = '[G]it[H]ub: open current file/line in browser' })
+
 -- Navigation Stuff
 vim.g.netrw_winsize = 75
 vim.keymap.set('n', '<leader>v', function()
