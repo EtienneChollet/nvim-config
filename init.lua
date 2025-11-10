@@ -240,14 +240,14 @@ end
 
 -- Treesitter
 vim.keymap.set('n', '<leader>st', '<cmd>Telescope treesitter<cr>', { desc = '<cmd>[S]earch [T]reesitter<CR>' })
-vim.keymap.set('n', '<leader>sD', function()
+vim.keymap.set('n', '<leader>sd', function()
   require('telescope.builtin').live_grep({
     additional_args = function()
       return { '--pcre2', '-i' }
     end,
     default_text = [[^\s*(class|def)\s.*]],
   })
-end, { desc = 'Find defs/classes with "resample"' })
+end, { desc = 'Find defs/classes' })
 
 -- Telescope diagnostics
 vim.keymap.set('n', '<leader>di', vim.diagnostic.open_float, { desc = 'Show diagnostic float' })
@@ -689,6 +689,32 @@ require('lazy').setup({
             '--smart-case',
             '--no-ignore', -- Ignore .gitignore files
           },
+          file_ignore_patterns = {
+            'build/',
+            '__pycache__/',
+            '%.pyc$',
+            '%.pyo$',
+            '%.pyd$',
+            '.pytest_cache/',
+            '.mypy_cache/',
+            '.ruff_cache/',
+            '%.js$',
+            '%.map$',
+            '%.css$',
+            -- Virtual environments
+            '.venv/',
+            'venv/',
+            'env/',
+            '.virtualenv/',
+            -- Build/distribution
+            'dist/',
+            'site/',
+            '%.egg%-info/',
+            '.eggs/',
+            '%.egg$',
+            -- OS files
+            '.DS_Store',
+          },
         },
         pickers = {
           find_files = {
@@ -714,7 +740,7 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
       vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
       vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
-      vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
+      vim.keymap.set('n', '<leader>sD', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
