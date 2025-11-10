@@ -448,9 +448,22 @@ vim.keymap.set('n', '<leader>gh', function()
   -- Construct GitHub URL
   local github_url = string.format('%s/blob/%s/%s#L%d', https_url, branch, rel_path, line)
 
-  -- Open in browser (macOS)
-  vim.fn.system('open ' .. vim.fn.shellescape(github_url))
-  print('Opened in browser: ' .. github_url)
+  -- Check if we're in an SSH session
+  local is_ssh = vim.env.SSH_CONNECTION ~= nil or vim.env.SSH_TTY ~= nil
+
+  if is_ssh then
+    -- Over SSH: copy to clipboard using OSC 52 escape sequence
+    local b64 = vim.fn.system('echo -n ' .. vim.fn.shellescape(github_url) .. ' | base64')
+    b64 = b64:gsub('\n', '')  -- Remove newlines
+    io.write(string.format('\027]52;c;%s\007', b64))
+    io.flush()
+    print('GitHub URL copied to clipboard: ' .. github_url)
+  else
+    -- Local: open in browser
+    local open_cmd = vim.fn.has('mac') == 1 and 'open' or 'xdg-open'
+    vim.fn.system(open_cmd .. ' ' .. vim.fn.shellescape(github_url))
+    print('Opened in browser: ' .. github_url)
+  end
 end, { desc = '[G]it[H]ub: open current file/line in browser' })
 
 -- Navigation Stuff
