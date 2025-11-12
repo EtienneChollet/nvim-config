@@ -771,6 +771,10 @@ require('lazy').setup({
           },
           file_ignore_patterns = {
             'build/',
+            'data/',
+            'output/',
+            'wandb/',
+            '%.pt$',
             '__pycache__/',
             '%.pyc$',
             '%.pyo$',
@@ -783,6 +787,7 @@ require('lazy').setup({
             '%.css$',
             -- Virtual environments
             '.venv/',
+            '.uv-env/',
             'venv/',
             'env/',
             '.virtualenv/',
