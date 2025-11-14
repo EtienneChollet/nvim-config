@@ -36,7 +36,7 @@ return {
   {
     'catppuccin/nvim',
     name = 'catppuccin',
-    priority = 1000,
+    priority = 1001,  -- Higher than tokyonight to load last
     config = function()
       require('catppuccin').setup {
         flavour = 'frappe', -- latte, frappe, macchiato, mocha
@@ -47,7 +47,7 @@ return {
         },
       }
       -- Activate catppuccin
-      -- vim.cmd.colorscheme 'catppuccin'
+      vim.cmd.colorscheme 'catppuccin'
     end,
   },
   {
@@ -103,6 +103,34 @@ return {
       vim.keymap.set('n', '<C-p>', function()
         harpoon:list():prev()
       end, { desc = 'Harpoon prev' })
+    end,
+  },
+  {
+    'MagicDuck/grug-far.nvim',
+    config = function()
+      require('grug-far').setup({
+        startInInsertMode = true,
+      })
+
+      -- Keymaps for grug-far
+      vim.keymap.set('n', '<leader>S', '<cmd>GrugFar<CR>', {
+        desc = 'Find and [S]ubstitute (grug-far)'
+      })
+      vim.keymap.set('n', '<leader>sw', function()
+        require('grug-far').grug_far({ prefills = { search = vim.fn.expand('<cword>') } })
+      end, {
+        desc = '[S]ubstitute current [w]ord'
+      })
+      vim.keymap.set('v', '<leader>sw', function()
+        require('grug-far').with_visual_selection({ prefills = { search = vim.fn.expand('<cword>') } })
+      end, {
+        desc = '[S]ubstitute selection'
+      })
+      vim.keymap.set('n', '<leader>sp', function()
+        require('grug-far').grug_far({ prefills = { paths = vim.fn.expand('%') } })
+      end, {
+        desc = '[S]ubstitute in current file'
+      })
     end,
   },
 }
