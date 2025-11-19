@@ -96,7 +96,7 @@ vim.opt.shiftwidth = 4
 vim.opt.expandtab = true
 
 -- Add nvm node to PATH for LSP servers (pyright, etc.)
-local nvm_node_path = vim.fn.expand('~/.nvm/versions/node/v22.21.0/bin')
+local nvm_node_path = vim.fn.expand '~/.nvm/versions/node/v22.21.0/bin'
 if vim.fn.isdirectory(nvm_node_path) == 1 then
   vim.env.PATH = nvm_node_path .. ':' .. vim.env.PATH
 end
@@ -241,12 +241,12 @@ end
 -- Treesitter
 vim.keymap.set('n', '<leader>st', '<cmd>Telescope treesitter<cr>', { desc = '<cmd>[S]earch [T]reesitter<CR>' })
 vim.keymap.set('n', '<leader>sd', function()
-  require('telescope.builtin').live_grep({
+  require('telescope.builtin').live_grep {
     additional_args = function()
       return { '--pcre2', '-i' }
     end,
     default_text = [[^\s*(class|def)\s.*]],
-  })
+  }
 end, { desc = 'Find defs/classes' })
 
 -- Telescope diagnostics
@@ -256,7 +256,7 @@ vim.keymap.set('n', '<leader>dd', '<cmd>Telescope diagnostics<CR>', { desc = 'Te
 -- Run Python script
 vim.keymap.set('n', '<leader>rp', function()
   vim.cmd 'write'
-  vim.cmd('!python %')
+  vim.cmd '!python %'
 end, { desc = '[R]un current [P]ython script' })
 
 -- Run pytest on current file or function
@@ -284,7 +284,7 @@ vim.keymap.set('n', '<leader>rt', function()
         if name_node then
           local name = vim.treesitter.get_node_text(name_node, 0)
           -- Only return if it's a test function
-          if name:match('^test_') then
+          if name:match '^test_' then
             return name
           end
         end
@@ -303,7 +303,7 @@ vim.keymap.set('n', '<leader>rt', function()
     print(string.format('Running test: %s', test_func))
   else
     cmd = string.format('python -m pytest %s -v', file)
-    print('Running all tests in file')
+    print 'Running all tests in file'
   end
 
   vim.cmd('!' .. cmd)
@@ -344,7 +344,7 @@ vim.keymap.set('n', '<leader>rf', function()
   local func_name, func_text = get_current_function()
 
   if not func_name then
-    print('No function found at cursor')
+    print 'No function found at cursor'
     return
   end
 
@@ -369,7 +369,7 @@ vim.keymap.set('n', '<leader>rf', function()
     print(string.format('Running function: %s()', func_name))
     vim.cmd('!python ' .. temp_file)
   else
-    print('Failed to create temp file')
+    print 'Failed to create temp file'
   end
 end, { desc = '[R]un current [F]unction' })
 
@@ -392,7 +392,7 @@ vim.api.nvim_create_user_command('QfAdd', function()
   local filepath = vim.api.nvim_buf_get_name(bufnr)
   local cursor = vim.api.nvim_win_get_cursor(0)
   local line = cursor[1]
-  local col = cursor[2] + 1  -- nvim uses 0-indexed columns
+  local col = cursor[2] + 1 -- nvim uses 0-indexed columns
 
   -- Get the current quickfix list
   local qflist = vim.fn.getqflist()
@@ -402,14 +402,14 @@ vim.api.nvim_create_user_command('QfAdd', function()
     filename = filepath,
     lnum = line,
     col = col,
-    text = vim.api.nvim_buf_get_lines(bufnr, line - 1, line, false)[1] or ""
+    text = vim.api.nvim_buf_get_lines(bufnr, line - 1, line, false)[1] or '',
   })
 
   -- Update quickfix list
   vim.fn.setqflist(qflist, 'r')
 
-  print(string.format("Added %s:%d to quickfix", vim.fn.fnamemodify(filepath, ':t'), line))
-end, { desc = "Add current location to quickfix list" })
+  print(string.format('Added %s:%d to quickfix', vim.fn.fnamemodify(filepath, ':t'), line))
+end, { desc = 'Add current location to quickfix list' })
 
 vim.keymap.set('n', '<C-q>', ':QfAdd<CR>', { desc = 'Add current location to quickfix' })
 vim.keymap.set('n', '<leader>q[', ':cprev<CR>', { desc = '[Q]uickfix [[] previous' })
@@ -423,17 +423,17 @@ vim.keymap.set('n', '<leader>gh', function()
   -- Get git root directory
   local git_root = vim.fn.systemlist('git -C ' .. vim.fn.shellescape(vim.fn.expand '%:p:h') .. ' rev-parse --show-toplevel')[1]
   if vim.v.shell_error ~= 0 then
-    print('Not in a git repository')
+    print 'Not in a git repository'
     return
   end
 
   -- Get relative path from git root
-  local rel_path = filepath:sub(#git_root + 2)  -- +2 to skip the trailing slash
+  local rel_path = filepath:sub(#git_root + 2) -- +2 to skip the trailing slash
 
   -- Get remote URL
   local remote_url = vim.fn.systemlist('git -C ' .. vim.fn.shellescape(git_root) .. ' remote get-url origin')[1]
   if vim.v.shell_error ~= 0 then
-    print('No git remote found')
+    print 'No git remote found'
     return
   end
 
@@ -454,13 +454,13 @@ vim.keymap.set('n', '<leader>gh', function()
   if is_ssh then
     -- Over SSH: copy to clipboard using OSC 52 escape sequence
     local b64 = vim.fn.system('echo -n ' .. vim.fn.shellescape(github_url) .. ' | base64')
-    b64 = b64:gsub('\n', '')  -- Remove newlines
+    b64 = b64:gsub('\n', '') -- Remove newlines
     io.write(string.format('\027]52;c;%s\007', b64))
     io.flush()
     print('GitHub URL copied to clipboard: ' .. github_url)
   else
     -- Local: open in browser
-    local open_cmd = vim.fn.has('mac') == 1 and 'open' or 'xdg-open'
+    local open_cmd = vim.fn.has 'mac' == 1 and 'open' or 'xdg-open'
     vim.fn.system(open_cmd .. ' ' .. vim.fn.shellescape(github_url))
     print('Opened in browser: ' .. github_url)
   end
@@ -483,6 +483,8 @@ vim.keymap.set('n', '<leader>v', function()
 end, { desc = 'Toggle netrw at current file dir' })
 
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
+-- Map jk to Esc in insert mode for easier escaping
+vim.keymap.set('i', 'jk', '<Esc>', { noremap = true, silent = true })
 vim.keymap.set('i', '@now', function()
   local ts = '[' .. os.date '%Y-%m-%d %H:%M:%S' .. ']'
   return ts
@@ -499,9 +501,10 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
 -- is not what someone will guess without a bit more experience.
 --
--- NOTE: This won't work in all terminal emulators/tmux/etc. Try your own mapping
--- or just use <C-\><C-n> to exit terminal mode
+-- NOTE: This won't work in all terminal emulators/tmux/etc
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
+vim.keymap.set('t', 'jk', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
+vim.keymap.set('t', '<C-k>', '<C-\\><C-n><C-w><C-k>', { desc = 'Exit terminal mode and move to upper window' })
 
 -- Create a custom command for opening a terminal at 30% height
 vim.api.nvim_create_user_command('Term30', function()
@@ -511,6 +514,15 @@ end, { desc = 'Open terminal at 30% height' })
 
 -- Optionally, create a keymap for easy access
 vim.keymap.set('n', '<leader>tt', '<cmd>Term30<CR>', { desc = '[T]erminal at 30% height' })
+
+-- Auto-enter insert mode when switching to a terminal buffer
+vim.api.nvim_create_autocmd('BufEnter', {
+  pattern = 'term://*',
+  callback = function()
+    vim.cmd 'startinsert'
+  end,
+  desc = 'Automatically enter insert mode when entering terminal buffer',
+})
 -- TIP: Disable arrow keys in normal mode
 -- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
 -- vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
@@ -582,9 +594,9 @@ require('lazy').setup({
     'ojroques/nvim-osc52',
     config = function()
       require('osc52').setup {
-        max_length = 0,      -- Maximum length of selection (0 for no limit)
-        silent = false,      -- Disable message on successful copy
-        trim = false,        -- Trim surrounding whitespaces before copy
+        max_length = 0, -- Maximum length of selection (0 for no limit)
+        silent = false, -- Disable message on successful copy
+        trim = false, -- Trim surrounding whitespaces before copy
         tmux_passthrough = true, -- Use tmux passthrough (requires tmux >= 3.3)
       }
 
@@ -594,13 +606,13 @@ require('lazy').setup({
       end
 
       local function paste()
-        return {vim.fn.split(vim.fn.getreg(''), '\n'), vim.fn.getregtype('')}
+        return { vim.fn.split(vim.fn.getreg '', '\n'), vim.fn.getregtype '' }
       end
 
       vim.g.clipboard = {
         name = 'osc52',
-        copy = {['+'] = copy, ['*'] = copy},
-        paste = {['+'] = paste, ['*'] = paste},
+        copy = { ['+'] = copy, ['*'] = copy },
+        paste = { ['+'] = paste, ['*'] = paste },
       }
 
       -- Optional: Set clipboard to use OSC52
@@ -802,18 +814,28 @@ require('lazy').setup({
           find_files = {
             find_command = {
               'fd',
-              '--type', 'f',
+              '--type',
+              'f',
               '--strip-cwd-prefix',
               '--no-ignore',
-              '--exclude', '.venv',
-              '--exclude', 'venv',
-              '--exclude', 'node_modules',
-              '--exclude', 'build',
-              '--exclude', 'dist',
-              '--exclude', 'data',
-              '--exclude', 'output',
-              '--exclude', 'wandb',
-              '--exclude', '__pycache__',
+              '--exclude',
+              '.venv',
+              '--exclude',
+              'venv',
+              '--exclude',
+              'node_modules',
+              '--exclude',
+              'build',
+              '--exclude',
+              'dist',
+              '--exclude',
+              'data',
+              '--exclude',
+              'output',
+              '--exclude',
+              'wandb',
+              '--exclude',
+              '__pycache__',
             },
           },
         },
@@ -963,14 +985,14 @@ require('lazy').setup({
           --  This is where a variable was first declared, or where a function is defined, etc.
           --  To jump back, press <C-t>.
           map('grd', function()
-            vim.cmd('tab split')
+            vim.cmd 'tab split'
             require('telescope.builtin').lsp_definitions()
           end, '[G]oto [D]efinition')
 
           -- WARN: This is not Goto Definition, this is Goto Declaration.
           --  For example, in C this would take you to the header.
           map('grD', function()
-            vim.cmd('tab split')
+            vim.cmd 'tab split'
             vim.lsp.buf.declaration()
           end, '[G]oto [D]eclaration')
 
@@ -1416,7 +1438,7 @@ require('lazy').setup({
   -- you can continue same window with `<space>sr` which resumes last telescope search
 }, {
   rocks = {
-    enabled = false,  -- Disable luarocks support globally (not available on this system)
+    enabled = false, -- Disable luarocks support globally (not available on this system)
   },
   ui = {
     -- If you are using a Nerd Font: set icons to an empty table which will use the
@@ -1452,26 +1474,26 @@ vim.api.nvim_create_autocmd('FileType', {
 -- [[ Auto-save and auto-reload configuration ]]
 -- Auto-save after 1 second of idle time (similar to VSCode's afterDelay)
 -- Uses CursorHold which fires after 'updatetime' milliseconds of inactivity
-vim.api.nvim_create_autocmd({"CursorHold", "CursorHoldI"}, {
-  pattern = "*",
+vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
+  pattern = '*',
   callback = function()
-    if vim.bo.modified and vim.bo.buftype == "" and vim.fn.filereadable(vim.fn.expand("%")) == 1 then
-      vim.cmd("silent! write")
+    if vim.bo.modified and vim.bo.buftype == '' and vim.fn.filereadable(vim.fn.expand '%') == 1 then
+      vim.cmd 'silent! write'
     end
-  end
+  end,
 })
 
 -- Auto-reload when cursor stops moving or on focus (cheap read operation)
-vim.api.nvim_create_autocmd({"CursorHold", "FocusGained", "BufEnter"}, {
-  pattern = "*",
-  command = "checktime"
+vim.api.nvim_create_autocmd({ 'CursorHold', 'FocusGained', 'BufEnter' }, {
+  pattern = '*',
+  command = 'checktime',
 })
 
 -- Built-in auto-save and auto-reload options
-vim.opt.autowrite = true      -- Auto-save when switching buffers
-vim.opt.autowriteall = true   -- Auto-save more aggressively
-vim.opt.autoread = true       -- Auto-reload when file changes externally
-vim.opt.updatetime = 500      -- Wait 500ms (0.5 seconds) after typing stops before triggering CursorHold
+vim.opt.autowrite = true -- Auto-save when switching buffers
+vim.opt.autowriteall = true -- Auto-save more aggressively
+vim.opt.autoread = true -- Auto-reload when file changes externally
+vim.opt.updatetime = 500 -- Wait 500ms (0.5 seconds) after typing stops before triggering CursorHold
 
 -- vim.g.netrw_altv = 1
 -- vim.g.netrw_browse_split = 0
